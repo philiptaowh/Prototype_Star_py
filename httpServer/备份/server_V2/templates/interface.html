@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人监控系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            height: calc(100vh - 40px);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .log-box {
+            background: rgba(13, 43, 69, 0.85);
+            border: 1px solid #2a527a;
+        }
+
+        .decision-box {
+            background: rgba(43, 13, 69, 0.85);
+            border: 1px solid #5a2a7a;
+        }
+
+        .video-box {
+            background: rgba(20, 20, 40, 0.8);
+            border: 1px solid #3d5afe;
+        }
+
+        .system-box {
+            background: rgba(13, 69, 43, 0.85);
+            border: 1px solid #2a7a5a;
+        }
+
+        h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .log-box h3 {
+            color: #4fc3f7;
+        }
+
+        .decision-box h3 {
+            color: #ba68c8;
+        }
+
+        .video-box h3 {
+            color: #29b6f6;
+        }
+
+        .system-box h3 {
+            color: #4cd964;
+        }
+
+        .log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(5, 25, 45, 0.6);
+            border-radius: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .timestamp {
+            color: #81d4fa;
+            font-size: 0.85rem;
+            margin-right: 10px;
+        }
+
+        /* 决策面板样式 */
+        .decision-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex: 1;
+            /* 新增滚动条 */
+            overflow-y: auto;
+            min-height: 0; /* 确保滚动条正常工作 */
+        }
+        
+        .decision-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .decision-item h4 {
+            color: #ba68c8;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .decision-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-align: center;
+            color: #e1bee7;
+            text-shadow: 0 0 8px rgba(186, 104, 200, 0.7);
+        }
+        
+        .decision-text {
+            font-family: 'Consolas', 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+            color: #e0e0e0;
+            /* 移除固定高度限制 */
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+
+        .video-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 20, 0.6);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 系统状态面板样式 */
+        .system-content {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 20px;
+            height: 100%;
+            /* 新增滚动条 */
+            overflow-y: auto;
+            max-height: 100%; /* 确保内容不会溢出 */
+        }
+
+        .system-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .system-item h4 {
+            color: #aaf0d1;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .system-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4cd964;
+            text-shadow: 0 0 12px rgba(76, 217, 100, 0.7);
+        }
+
+        .system-state {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #ff5252;
+            text-shadow: 0 0 12px rgba(255, 82, 82, 0.7);
+        }
+        
+        .device-status {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .device-status.online {
+            color: #4cd964;
+            border: 2px solid #4cd964;
+        }
+        
+        .device-status.offline {
+            color: #ff5252;
+            border: 2px solid #ff5252;
+        }
+        
+        .device-icon {
+            font-size: 2rem;
+            margin-right: 10px;
+        }
+
+        /* 加载动画样式 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .loading-spinner {
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #live-image {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 状态指示器 */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            margin-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            margin-right: 8px;
+            box-shadow: 0 0 8px #4CAF50;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: #bbdefb;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 1fr);
+            }
+            
+            .panel {
+                min-height: 300px;
+            }
+            
+            .system-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, 1fr);
+            }
+            
+            .decision-value {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel log-box">
+            <h3>服务器通信日志</h3>
+            <div class="log-content" id="logs">
+                <div class="log-entry">
+                    <span class="timestamp">[系统启动]</span>正在连接服务器...
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator" id="connection-status"></div>
+                    <span class="status-text" id="connection-text">连接状态: 检测中</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" style="background: #FFC107;"></div>
+                    <span class="status-text">最后更新: <span id="last-update">--:--:--</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel decision-box">
+            <h3>模型决策与推理</h3>
+            <div class="decision-content">
+                <div class="decision-item">
+                    <h4>运动决策</h4>
+                    <div class="decision-value" id="decision-step">--</div>
+                </div>
+                
+                <div class="decision-item">
+                    <h4>情绪决策</h4>
+                    <div class="decision-value" id="decision-emotion">--</div>
+                </div>
+                
+                <div class="decision-item">
+                    <h4>环境推理</h4>
+                    <div class="decision-text" id="decision-word">正在加载推理信息...</div>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator" id="decision-status"></div>
+                    <span class="status-text">决策状态: 等待中</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel video-box">
+            <h3>实时画面监控</h3>
+            <div class="video-container">
+                <div class="loading-overlay" id="image-loader">
+                    <div class="loading-spinner"></div>
+                </div>
+                <img id="live-image" src="" alt="机器人实时画面" onerror="handleImageError(this)">
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator" style="background: #FFC107;"></div>
+                    <span class="status-text">图像源: ESP32-CAM</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" id="image-status"></div>
+                    <span class="status-text">状态: 加载中</span>
+                </div>
+            </div>
+        </div> 
+        
+        <div class="panel system-box">
+            <h3>系统状态分析</h3>
+            <div class="system-content">
+                <div class="system-item">
+                    <h4>情绪总值</h4>
+                    <div class="system-value" id="emotion-value">0.00</div>
+                </div>
+                <div class="system-item">
+                    <h4>当前情感状态</h4>
+                    <div class="system-state" id="emotion-state">平静</div>
+                </div>
+                <div class="system-item">
+                    <h4>ESP32-CAM</h4>
+                    <div class="device-status offline" id="cam-status">
+                        <span class="device-icon">📷</span> 离线
+                    </div>
+                </div>
+                <div class="system-item">
+                    <h4>ESP32-Robot</h4>
+                    <div class="device-status offline" id="robot-status">
+                        <span class="device-icon">🤖</span> 离线
+                    </div>
+                </div>
+            </div>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-indicator" style="background: #4CAF50;"></div>
+                    <span class="status-text">情感分析: 运行中</span>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator" style="background: #4CAF50;"></div>
+                    <span class="status-text">更新频率: 1.2秒</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 图片错误处理函数
+        function handleImageError(imgElement) {
+            console.error('图片加载失败');
+            imgElement.src = 'https://via.placeholder.com/800x600/2c3e50/ecf0f1?text=图像加载失败';
+            document.getElementById('image-loader').style.display = 'none';
+            updateStatus('image-status', 'error', '错误: 图片加载失败');
+        }
+        
+        // 更新状态指示器
+        function updateStatus(elementId, status, text) {
+            const indicator = document.querySelector(`#${elementId}`);
+            const textElement = document.querySelector(`#${elementId} + .status-text`);
+            
+            if (status === 'success') {
+                indicator.style.backgroundColor = '#4CAF50';
+                indicator.style.boxShadow = '0 0 8px #4CAF50';
+                if (textElement) textElement.textContent = text || '状态: 正常';
+            } else if (status === 'error') {
+                indicator.style.backgroundColor = '#F44336';
+                indicator.style.boxShadow = '0 0 8px #F44336';
+                if (textElement) textElement.textContent = text || '状态: 错误';
+            } else {
+                indicator.style.backgroundColor = '#FFC107';
+                indicator.style.boxShadow = '0 0 8px #FFC107';
+                if (textElement) textElement.textContent = text || '状态: 加载中';
+            }
+        }
+        
+        // 从服务器路径中提取文件名
+        function extractFilename(path) {
+            if (!path) return null;
+            return path.split('/').pop();
+        }
+        
+        // 更新所有数据
+        async function updateData() {
+            try {
+                // 更新日志
+                const logsResponse = await fetch('/get_logs');
+                if (!logsResponse.ok) throw new Error('日志请求失败');
+                const logsData = await logsResponse.json();
+                
+                const logsContainer = document.getElementById('logs');
+                logsContainer.innerHTML = '';
+                
+                logsData.forEach(log => {
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    logEntry.textContent = log;
+                    logsContainer.appendChild(logEntry);
+                });
+                
+                // 滚动到最新日志
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+                
+                // 更新决策
+                const decisionResponse = await fetch('/get_decision');
+                if (!decisionResponse.ok) throw new Error('决策请求失败');
+                const decisionData = await decisionResponse.json();
+                document.getElementById('decision-step').textContent = decisionData.step || "--";
+                document.getElementById('decision-emotion').textContent = decisionData.Emotion || "--";
+                document.getElementById('decision-word').textContent = decisionData.word || "暂无推理信息";
+                
+                // 更新情绪
+                const emotionResponse = await fetch('/get_emotion');
+                if (!emotionResponse.ok) throw new Error('情绪请求失败');
+                const emotionData = await emotionResponse.json();
+                document.getElementById('emotion-value').textContent = emotionData.power.toFixed(2);
+                document.getElementById('emotion-state').textContent = emotionData.state;
+                
+                // 更新设备状态
+                const camStatus = document.getElementById('cam-status');
+                const robotStatus = document.getElementById('robot-status');
+                
+                if (emotionData.camState === 1) {
+                    camStatus.className = 'device-status online';
+                    camStatus.innerHTML = '<span class="device-icon">📷</span> 在线';
+                } else {
+                    camStatus.className = 'device-status offline';
+                    camStatus.innerHTML = '<span class="device-icon">📷</span> 离线';
+                }
+                
+                if (emotionData.robotState === 1) {
+                    robotStatus.className = 'device-status online';
+                    robotStatus.innerHTML = '<span class="device-icon">🤖</span> 在线';
+                } else {
+                    robotStatus.className = 'device-status offline';
+                    robotStatus.innerHTML = '<span class="device-icon">🤖</span> 离线';
+                }
+                
+                // 更新图片
+                const imageResponse = await fetch('/get_image');
+                if (!imageResponse.ok) throw new Error('图片请求失败');
+                const imageData = await imageResponse.json();
+                
+                if (imageData.image) {
+                    const filename = extractFilename(imageData.image);
+                    if (filename) {
+                        const imgElement = document.getElementById('live-image');
+                        const loader = document.getElementById('image-loader');
+                        
+                        loader.style.display = 'flex';
+                        imgElement.style.opacity = '0.3';
+                        
+                        // 设置新的图片源
+                        imgElement.src = `/uploads/${filename}`;
+                        
+                        // 图片加载完成后隐藏加载器
+                        imgElement.onload = function() {
+                            imgElement.style.opacity = '1';
+                            loader.style.display = 'none';
+                            updateStatus('image-status', 'success', '状态: 正常');
+                        };
+                        
+                        imgElement.onerror = function() {
+                            handleImageError(imgElement);
+                        };
+                    }
+                }
+                
+                // 更新连接状态和时间
+                updateStatus('connection-status', 'success');
+                document.getElementById('connection-text').textContent = '连接状态: 正常';
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                updateStatus('decision-status', 'success', '决策状态: 已更新');
+                
+            } catch (error) {
+                console.error('数据更新失败:', error);
+                updateStatus('connection-status', 'error', '连接状态: 错误');
+                updateStatus('image-status', 'error', '状态: 连接错误');
+                updateStatus('decision-status', 'error', '决策状态: 错误');
+            }
+        }
+        
+        // 初始加载
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化状态指示器
+            updateStatus('connection-status', 'loading');
+            updateStatus('image-status', 'loading');
+            updateStatus('decision-status', 'loading');
+            
+            // 每秒钟更新一次数据
+            setInterval(updateData, 1200);
+            
+            // 立即加载数据
+            updateData();
+        });
+    </script>
+</body>
+</html>
